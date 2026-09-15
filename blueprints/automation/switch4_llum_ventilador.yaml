@@ -1,0 +1,118 @@
+blueprint:
+  name: Interruptor Zigbee 4 botons (ZHA) — Llum + Ventilador
+  description: >
+    Controla un llum i un ventilador amb un interruptor Zigbee de 4 botons
+    (Tuya/Moes, model típic TS0044) connectat via ZHA.
+
+    Botó 1 → on/off llum
+    Botó 2 → on/off ventilador
+    Botó 3 → puja velocitat ventilador (l'engega si estava apagat)
+    Botó 4 → baixa velocitat ventilador (l'apaga si arriba a 0)
+
+    Si en triar el dispositiu no et surten les opcions "Botó 1 premut curt",
+    etc., mira la nota al final d'aquest blueprint.
+  domain: automation
+  source_url: null
+  input:
+    remote:
+      name: Interruptor Zigbee (4 botons)
+      description: El dispositiu ZHA de l'interruptor de paret/mando.
+      selector:
+        device:
+          integration: zha
+
+    light_target:
+      name: Llum
+      selector:
+        entity:
+          domain: light
+
+    fan_target:
+      name: Ventilador
+      selector:
+        entity:
+          domain: fan
+
+    speed_step:
+      name: Salt de velocitat
+      description: Percentatge que puja/baixa cada polsació dels botons 3 i 4.
+      default: 25
+      selector:
+        number:
+          min: 5
+          max: 50
+          step: 5
+          unit_of_measurement: "%"
+          mode: slider
+
+mode: parallel
+max_exceeded: silent
+
+trigger:
+  - platform: device
+    domain: zha
+    device_id: !input remote
+    type: remote_button_short_press
+    subtype: button_1
+    id: boto1
+  - platform: device
+    domain: zha
+    device_id: !input remote
+    type: remote_button_short_press
+    subtype: button_2
+    id: boto2
+  - platform: device
+    domain: zha
+    device_id: !input remote
+    type: remote_button_short_press
+    subtype: button_3
+    id: boto3
+  - platform: device
+    domain: zha
+    device_id: !input remote
+    type: remote_button_short_press
+    subtype: button_4
+    id: boto4
+
+action:
+  - choose:
+      # Botó 1: toggle llum
+      - conditions:
+          - condition: trigger
+            id: boto1
+        sequence:
+          - service: light.toggle
+            target:
+              entity_id: !input light_target
+
+      # Botó 2: toggle ventilador
+      - conditions:
+          - condition: trigger
+            id: boto2
+        sequence:
+          - service: fan.toggle
+            target:
+              entity_id: !input fan_target
+
+      # Botó 3: puja velocitat (engega si estava apagat)
+      - conditions:
+          - condition: trigger
+            id: boto3
+        sequence:
+          - service: fan.increase_speed
+            target:
+              entity_id: !input fan_target
+            data:
+              percentage_step: !input speed_step
+
+      # Botó 4: baixa velocitat (apaga si arriba a 0)
+      - conditions:
+          - condition: trigger
+            id: boto4
+        sequence:
+          - service: fan.decrease_speed
+            target:
+              entity_id: !input fan_target
+            data:
+              percentage_step: !input speed_step
+
