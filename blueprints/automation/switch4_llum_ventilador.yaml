@@ -4,8 +4,10 @@ blueprint:
     Controla un llum i un ventilador amb un interruptor Zigbee de 4 botons
     (Tuya/Moes, model típic TS0044) connectat via ZHA.
 
-    Botó 1 → on/off llum
-    Botó 2 → on/off ventilador
+    Botó 1 (clic curt) → on/off llum
+    Botó 1 (mantingut) → activa/desactiva el bip del ventilador
+    Botó 2 (clic curt) → on/off ventilador
+    Botó 2 (mantingut) → inverteix el sentit de gir del ventilador
     Botó 3 → puja velocitat ventilador (l'engega si estava apagat)
     Botó 4 → baixa velocitat ventilador (l'apaga si arriba a 0)
 
@@ -32,6 +34,15 @@ blueprint:
         entity:
           domain: fan
 
+    buzzer_switch:
+      name: Interruptor del bip del ventilador
+      description: >
+        Entitat "switch" que activa/desactiva el so (bip) del mòdul del ventilador
+        (normalment apareix com a "Sonido" al dispositiu Tuya).
+      selector:
+        entity:
+          domain: switch
+
     speed_step:
       name: Salt de velocitat
       description: Percentatge que puja/baixa cada polsació dels botons 3 i 4.
@@ -46,6 +57,10 @@ blueprint:
 
 mode: parallel
 max_exceeded: silent
+
+variables:
+  fan_target: !input fan_target
+  buzzer_switch: !input buzzer_switch
 
 trigger:
   - platform: device
@@ -72,6 +87,18 @@ trigger:
     type: remote_button_short_press
     subtype: button_4
     id: boto4
+  - platform: device
+    domain: zha
+    device_id: !input remote
+    type: remote_button_long_press
+    subtype: button_1
+    id: boto1_llarg
+  - platform: device
+    domain: zha
+    device_id: !input remote
+    type: remote_button_long_press
+    subtype: button_2
+    id: boto2_llarg
 
 action:
   - choose:
@@ -114,3 +141,24 @@ action:
               entity_id: !input fan_target
             data:
               percentage_step: !input speed_step
+
+      # Botó 1 mantingut: activa/desactiva el bip del ventilador
+      - conditions:
+          - condition: trigger
+            id: boto1_llarg
+        sequence:
+          - service: switch.toggle
+            target:
+              entity_id: !input buzzer_switch
+
+      # Botó 2 mantingut: inverteix el sentit de gir del ventilador
+      - conditions:
+          - condition: trigger
+            id: boto2_llarg
+        sequence:
+          - service: fan.set_direction
+            target:
+              entity_id: !input fan_target
+            data:
+              direction: >
+                {{ 'reverse' if state_attr(fan_target, 'direction') == 'forward' else 'forward' }}
