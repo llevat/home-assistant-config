@@ -5,12 +5,15 @@ blueprint:
     connectat via ZHA. Pots assignar lliurement una acció (o cap) a cada
     botó (clic curt).
 
-    IMPORTANT: aquest blueprint assumeix el patró habitual de ZHA per als
-    esdeveniments de botó (remote_button_short_press amb subtype button_1
-    .. button_6). Un cop aparellis l'Aqara Opple, revisa la pestanya
-    "Activitat" del dispositiu: si els noms d'esdeveniment que hi surten
-    són diferents (alguns Aqara Opple fan servir noms propis), avisa'm per
-    ajustar el blueprint als noms reals.
+    Aquest interruptor funciona en mode "multi-state" de ZHA, que és el que
+    permet distingir clic simple/doble/mantingut per separat. Per això els
+    triggers de clic curt fan servir el tipus "remote_button_alt_short_press"
+    (amb l'"Alt") en lloc del "remote_button_short_press" normal que fan
+    servir altres interruptors (com el Tuya/Moes TS0044).
+
+    Si en el futur vols afegir accions de doble clic o de mantenir premut,
+    els tipus disponibles per aquest dispositiu són "remote_button_alt_double_press"
+    i "remote_button_long_release" (confirmats al log del dispositiu).
   domain: automation
   input:
     remote:
@@ -110,37 +113,37 @@ trigger:
   - platform: device
     domain: zha
     device_id: !input remote
-    type: remote_button_short_press
+    type: remote_button_alt_short_press
     subtype: button_1
     id: boto1
   - platform: device
     domain: zha
     device_id: !input remote
-    type: remote_button_short_press
+    type: remote_button_alt_short_press
     subtype: button_2
     id: boto2
   - platform: device
     domain: zha
     device_id: !input remote
-    type: remote_button_short_press
+    type: remote_button_alt_short_press
     subtype: button_3
     id: boto3
   - platform: device
     domain: zha
     device_id: !input remote
-    type: remote_button_short_press
+    type: remote_button_alt_short_press
     subtype: button_4
     id: boto4
   - platform: device
     domain: zha
     device_id: !input remote
-    type: remote_button_short_press
+    type: remote_button_alt_short_press
     subtype: button_5
     id: boto5
   - platform: device
     domain: zha
     device_id: !input remote
-    type: remote_button_short_press
+    type: remote_button_alt_short_press
     subtype: button_6
     id: boto6
 
