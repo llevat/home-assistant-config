@@ -5,12 +5,14 @@ blueprint:
     (Tuya/Moes, model típic TS0044) connectat via ZHA.
 
     Botó 1 (clic curt) → on/off llum
-    Botó 1 (doble clic) → rota entre 3 tons de blanc del llum
-    Botó 1 (mantingut) → activa/desactiva el bip del ventilador
     Botó 2 (clic curt) → on/off ventilador
     Botó 2 (mantingut) → inverteix el sentit de gir del ventilador
     Botó 3 → puja velocitat ventilador (l'engega si estava apagat)
     Botó 4 → baixa velocitat ventilador (l'apaga si arriba a 0)
+
+    El botó i el tipus de pulsació pel bip i pel canvi de color es trien
+    lliurement als paràmetres del blueprint (per defecte: botó 1 mantingut
+    pel bip, botó 1 doble clic pel canvi de color).
 
     Si en triar el dispositiu no et surten les opcions "Botó 1 premut curt",
     etc., mira la nota al final d'aquest blueprint.
@@ -43,6 +45,68 @@ blueprint:
       selector:
         entity:
           domain: switch
+
+    buzzer_button:
+      name: Botó pel bip
+      description: Quin botó de l'interruptor activa/desactiva el bip.
+      default: button_1
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: "Botó 1"
+              value: button_1
+            - label: "Botó 2"
+              value: button_2
+            - label: "Botó 3"
+              value: button_3
+            - label: "Botó 4"
+              value: button_4
+
+    buzzer_press_type:
+      name: Tipus de pulsació pel bip
+      default: remote_button_long_press
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: "Clic curt"
+              value: remote_button_short_press
+            - label: "Doble clic"
+              value: remote_button_double_press
+            - label: "Mantingut"
+              value: remote_button_long_press
+
+    color_button:
+      name: Botó pel canvi de color
+      description: Quin botó de l'interruptor rota els tons de blanc del llum.
+      default: button_1
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: "Botó 1"
+              value: button_1
+            - label: "Botó 2"
+              value: button_2
+            - label: "Botó 3"
+              value: button_3
+            - label: "Botó 4"
+              value: button_4
+
+    color_press_type:
+      name: Tipus de pulsació pel canvi de color
+      default: remote_button_double_press
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: "Clic curt"
+              value: remote_button_short_press
+            - label: "Doble clic"
+              value: remote_button_double_press
+            - label: "Mantingut"
+              value: remote_button_long_press
 
     speed_step:
       name: Salt de velocitat
@@ -125,15 +189,15 @@ trigger:
   - platform: device
     domain: zha
     device_id: !input remote
-    type: remote_button_double_press
-    subtype: button_1
-    id: boto1_doble
+    type: !input color_press_type
+    subtype: !input color_button
+    id: boto_color
   - platform: device
     domain: zha
     device_id: !input remote
-    type: remote_button_long_press
-    subtype: button_1
-    id: boto1_llarg
+    type: !input buzzer_press_type
+    subtype: !input buzzer_button
+    id: boto_buzzer
   - platform: device
     domain: zha
     device_id: !input remote
@@ -183,10 +247,10 @@ action:
             data:
               percentage_step: !input speed_step
 
-      # Botó 1 doble clic: rota entre els 3 tons de blanc
+      # Botó configurable: rota entre els 3 tons de blanc
       - conditions:
           - condition: trigger
-            id: boto1_doble
+            id: boto_color
         sequence:
           - service: light.turn_on
             target:
@@ -196,10 +260,10 @@ action:
                 {% set c = state_attr(light_target, 'color_temp_kelvin') | float(warm_temp) %}
                 {{ mid_temp if c < (warm_temp + mid_temp) / 2 else (cool_temp if c < (mid_temp + cool_temp) / 2 else warm_temp) }}
 
-      # Botó 1 mantingut: activa/desactiva el bip del ventilador
+      # Botó configurable: activa/desactiva el bip del ventilador
       - conditions:
           - condition: trigger
-            id: boto1_llarg
+            id: boto_buzzer
         sequence:
           - service: switch.toggle
             target:
