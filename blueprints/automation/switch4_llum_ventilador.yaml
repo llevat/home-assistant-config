@@ -5,6 +5,7 @@ blueprint:
     (Tuya/Moes, model típic TS0044) connectat via ZHA.
 
     Botó 1 (clic curt) → on/off llum
+    Botó 1 (doble clic) → rota entre 3 tons de blanc del llum
     Botó 1 (mantingut) → activa/desactiva el bip del ventilador
     Botó 2 (clic curt) → on/off ventilador
     Botó 2 (mantingut) → inverteix el sentit de gir del ventilador
@@ -55,12 +56,46 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
 
+    warm_temp:
+      name: Blanc càlid
+      default: 2700
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 50
+          unit_of_measurement: "K"
+
+    mid_temp:
+      name: Blanc neutre
+      default: 4500
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 50
+          unit_of_measurement: "K"
+
+    cool_temp:
+      name: Blanc fred
+      default: 6500
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          step: 50
+          unit_of_measurement: "K"
+
 mode: parallel
 max_exceeded: silent
 
 variables:
   fan_target: !input fan_target
   buzzer_switch: !input buzzer_switch
+  light_target: !input light_target
+  warm_temp: !input warm_temp
+  mid_temp: !input mid_temp
+  cool_temp: !input cool_temp
 
 trigger:
   - platform: device
@@ -87,6 +122,12 @@ trigger:
     type: remote_button_short_press
     subtype: button_4
     id: boto4
+  - platform: device
+    domain: zha
+    device_id: !input remote
+    type: remote_button_double_press
+    subtype: button_1
+    id: boto1_doble
   - platform: device
     domain: zha
     device_id: !input remote
@@ -141,6 +182,19 @@ action:
               entity_id: !input fan_target
             data:
               percentage_step: !input speed_step
+
+      # Botó 1 doble clic: rota entre els 3 tons de blanc
+      - conditions:
+          - condition: trigger
+            id: boto1_doble
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light_target
+            data:
+              color_temp_kelvin: >-
+                {% set c = state_attr(light_target, 'color_temp_kelvin') | float(warm_temp) %}
+                {{ mid_temp if c < (warm_temp + mid_temp) / 2 else (cool_temp if c < (mid_temp + cool_temp) / 2 else warm_temp) }}
 
       # Botó 1 mantingut: activa/desactiva el bip del ventilador
       - conditions:
